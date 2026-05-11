@@ -140,8 +140,10 @@ $params = [
     'sign' => '签名'
 ];
 
-// POST 到 /submit.php 或 /mapi.php
+// POST 到 /submit.php（推荐，不要使用 mapi.php）
 ```
+
+> **重要：请使用 `submit.php` 接口，不要使用 `mapi.php`。** submit.php 自带完整支付页面（QR code展示、倒计时、状态检查），mapi.php 仅返回 JSON 需要商户自行处理。
 
 ### 监控支付状态
 
@@ -209,13 +211,45 @@ alimpay/
 
 ```php
 // 1. 参数按键名升序排序
-// 2. 拼接成 key1=value1&key2=value2 格式  
+// 2. 拼接成 key1=value1&key2=value2 格式（使用原始值，不做URL编码）
 // 3. 末尾拼接商户密钥
 // 4. 计算MD5值
 
 $signStr = 'money=0.01&name=测试&out_trade_no=123&pid=1001';
 $sign = md5($signStr . $merchantKey);
 ```
+
+> **注意：** 部分商户系统（如独角Next）会在签名参数中包含 `clientip`、`device` 等额外字段。本项目的 `validateSignature()` 已处理这种情况，会从原始请求数据中获取所有参与签名的参数。
+
+## 踩坑记录（2026-05 实测）
+
+### 转账模式已被支付宝风控封堵
+
+支付宝对 `alipays://` scheme 触发转账的方式做了全面风控拦截，以下方式**全部不可用**：
+
+| 方式 | 结果 |
+|------|------|
+| `appId=09999988` 直接转账 | 无法打开 |
+| `appId=20000116` 直接转账 | "存在风险，支付宝中断操作" |
+| `render.alipay.com/p/s/i` 包装 | "停止访问，包含违规内容" |
+| 5层防风控 `mdeduct-landing` | "已停止访问" |
+
+**结论：请使用经营码收款模式（推荐），转账模式在 2026 年已无法使用。**
+
+### 必须使用 submit.php 接口
+
+- `submit.php`：自带完整支付页面，QR code 展示、倒计时、状态检查一应俱全
+- `mapi.php`：仅返回 JSON，需要商户自行处理 QR code 生成和支付页面
+
+商户系统（如独角Next）配置时：
+- **渠道类型**：易支付 V1
+- **API 地址**：`https://你的域名/submit.php`
+- **交互模式**：跳转
+
+### 签名验证踩坑
+
+1. **不要对参数值做 URL 编码** — 易支付 V1 协议使用原始值签名
+2. **商户系统可能发送额外参数** — 如独角Next会发送 `clientip`、`device`，签名验证时必须从原始请求数据（`$_GET + $_POST`）中获取所有参数
 
 ## 常见问题
 
