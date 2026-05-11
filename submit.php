@@ -304,7 +304,9 @@ try {
             <?php endif; ?>
 
             <div class="buttons">
+                <?php if (!empty($result['payment_url'])): ?>
                 <a href="<?php echo htmlspecialchars($result['payment_url']); ?>" class="btn" id="openInAlipay">打开支付宝App支付</a>
+                <?php endif; ?>
                 <button class="btn btn-secondary" onclick="checkOrderStatus()">我已支付，查询订单状态</button>
             </div>
         </div>
